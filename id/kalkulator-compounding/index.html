@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator Compounding | Berdua Ibnu Dewi</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --accent: #2563EB;
+    --accent-light: #EFF4FF;
+    --bg: #F5F7FA;
+    --card: #FFFFFF;
+    --text: #111827;
+    --muted: #6B7280;
+    --border: #E5E7EB;
+    --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .page-wrap { max-width: 800px; margin: 0 auto; padding: 48px 20px 80px; }
+
+  .header, .footer { margin-bottom: 32px; text-align: center; }
+  .header h1 { font-size: clamp(1.5rem,4vw,2rem); font-weight: 700; color: var(--text); margin-bottom: 6px; letter-spacing: -0.3px; }
+  .header p, .footer p  { color: var(--muted); font-size: 15px; line-height: 1.6; }
+
+  .card { background: var(--card); border-radius: 14px; padding: 28px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 16px; }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 20px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:560px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+  .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .field .hint  { font-size: 12px; color: #9CA3AF; }
+
+  .input-wrap { position: relative; }
+  .prefix { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 600; color: #9CA3AF; pointer-events: none; }
+  .suffix-pct { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 600; color: #9CA3AF; pointer-events: none; }
+
+  input[type="number"] {
+    width: 100%; padding: 11px 12px 11px 36px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+    color: var(--text); background: #FAFAFA; outline: none;
+    transition: border-color 0.15s, background 0.15s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus { border-color: var(--accent); background: #fff; }
+  .no-prefix { padding-left: 12px !important; padding-right: 36px !important; }
+
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  .slider-field { margin-bottom: 20px; }
+  .slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .slider-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .slider-val { font-size: 20px; font-weight: 700; color: var(--accent); }
+
+  input[type="range"] {
+    width: 100%; height: 5px; border-radius: 99px; border: none; outline: none;
+    -webkit-appearance: none;
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--val,10%), var(--border) var(--val,10%), var(--border) 100%);
+    cursor: pointer; margin-bottom: 4px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); border: 2.5px solid #fff;
+    box-shadow: 0 1px 6px rgba(37,99,235,0.35); transition: transform 0.12s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  .slider-ticks { display: flex; justify-content: space-between; }
+  .slider-ticks span { font-size: 11px; color: #9CA3AF; }
+
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 15px; }
+  .pill { padding: 7px 16px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.15s; background: #fff; }
+  .pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pill:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+  .btn-hitung { width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 4px; transition: opacity 0.15s, transform 0.12s; }
+  .btn-hitung:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-hitung:active { transform: translateY(0); }
+
+  .result-hero { background: var(--accent); border-radius: 14px; padding: 32px 28px; text-align: center; color: #fff; display: none; margin-bottom: 16px; animation: popIn 0.4s cubic-bezier(.34,1.56,.64,1) both; }
+  .hero-label  { font-size: 13px; opacity: 0.75; margin-bottom: 8px; }
+  .hero-amount { font-size: clamp(2rem,6vw,3rem); font-weight: 700; letter-spacing: -1px; margin-bottom: 4px; }
+  .hero-sub    { font-size: 13px; opacity: 0.6; }
+
+  .stat-grid { display: none; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 16px; }
+  @media(max-width:520px) { .stat-grid { grid-template-columns: 1fr; } }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+  .stat-lbl { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 6px; }
+  .stat-pct { display: inline-block; font-size: 11px; font-weight: 700; background: var(--accent-light); color: var(--accent); padding: 2px 8px; border-radius: 99px; margin-bottom: 6px; }
+  .stat-amt { font-size: 17px; font-weight: 700; color: var(--text); }
+
+  .chart-card { display: none; }
+  .chart-wrap { position: relative; height: 260px; }
+
+  .table-card { display: none; }
+  .btn-toggle { background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.15s; margin-top: 4px; }
+  .btn-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .tbl-scroll { overflow-x: auto; margin-top: 16px; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead tr { background: #F9FAFB; }
+  thead th { padding: 11px 16px; text-align: right; font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); }
+  thead th:first-child { text-align: center; }
+  tbody tr { border-bottom: 1px solid #F3F4F6; transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--accent-light); }
+  tbody td { padding: 11px 16px; text-align: right; }
+  tbody td:first-child { text-align: center; font-weight: 700; color: var(--accent); }
+  .td-gain  { font-weight: 600; color: #059669; }
+  .td-total { font-weight: 700; }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  .empty-icon  { font-size: 38px; margin-bottom: 10px; }
+
+  @keyframes popIn  { from { opacity:0; transform:scale(0.93); } to { opacity:1; transform:scale(1); } }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="header">
+    <h1>Kalkulator Compounding</h1>
+    <p>Hitung seberapa besar investasi Anda bertumbuh dari waktu ke waktu.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Informasi Investasi</div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label>Investasi Awal (Rp)</label>
+        <div class="input-wrap">
+          <span class="prefix">Rp</span>
+          <input type="number" id="investasiAwal" placeholder="0" min="0" value="10000000">
+        </div>
+        <span class="hint">Modal awal yang Anda miliki saat ini.</span>
+      </div>
+      <div class="field">
+        <label>Kontribusi Bulanan (Rp)</label>
+        <div class="input-wrap">
+          <span class="prefix">Rp</span>
+          <input type="number" id="kontribusiBulanan" placeholder="0" min="0" value="1000000">
+        </div>
+        <span class="hint">Jumlah investasi rutin per bulan.</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="slider-field">
+      <div class="slider-header">
+        <span class="slider-label">Lama Waktu Menabung</span>
+        <span class="slider-val"><span id="tahunVal">10</span> Tahun</span>
+      </div>
+      <input type="range" id="lamaTahun" min="1" max="40" value="10" step="1">
+      <div class="slider-ticks"><span>1 Thn</span><span>10</span><span>20</span><span>30</span><span>40 Thn</span></div>
+    </div>
+
+    <div class="slider-field">
+      <div class="slider-header">
+        <span class="slider-label">Estimasi Persentase Keuntungan Tahunan</span>
+        <span class="slider-val"><span id="returnVal">12</span>%</span>
+      </div>
+      <input type="range" id="returnSlider" min="0" max="1000" value="12" step="0.5">
+      <div class="slider-ticks"><span>0%</span><span>250%</span><span>500%</span><span>750%</span><span>1000%</span></div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;color:var(--muted);white-space:nowrap">Atau ketik:</span>
+        <div class="input-wrap" style="max-width:130px">
+          <input type="number" id="returnInput" class="no-prefix" placeholder="0" min="0" max="1000" step="0.5" value="12">
+          <span class="suffix-pct">%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field" style="margin-bottom:20px">
+      <label>Frekuensi Compounding</label>
+      <div class="pills" id="freqPills">
+        <span class="pill" data-val="1" onclick="setPill(this)">Tahunan</span>
+        <span class="pill active" data-val="12" onclick="setPill(this)">Bulanan</span>
+        <span class="pill" data-val="365" onclick="setPill(this)">Harian</span>
+      </div>
+    </div>
+
+    <button class="btn-hitung" onclick="hitung()">Ayo Coba Hitung</button>
+  </div>
+
+  <div class="result-hero" id="resultHero">
+    <div class="hero-label" id="heroLabel">Dalam 10 Tahun, Anda Akan Memiliki:</div>
+    <div class="hero-amount" id="heroAmount">Rp 0</div>
+    <div class="hero-sub">Total Nilai Masa Depan Investasi Anda</div>
+  </div>
+
+  <div class="stat-grid" id="statGrid">
+    <div class="stat-card">
+      <div class="stat-lbl">SALDO AWAL</div>
+      <div class="stat-pct" id="pctAwal">0%</div>
+      <div class="stat-amt" id="statAwal">Rp 0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">TOTAL KONTRIBUSI</div>
+      <div class="stat-pct" id="pctKontribusi">0%</div>
+      <div class="stat-amt" id="statKontribusi">Rp 0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">TOTAL KEUNTUNGAN</div>
+      <div class="stat-pct" id="pctGain">0%</div>
+      <div class="stat-amt" id="statGain">Rp 0</div>
+    </div>
+  </div>
+
+  <div class="card chart-card" id="chartCard">
+    <div class="card-title">Grafik Pertumbuhan</div>
+    <div class="chart-wrap"><canvas id="growthChart"></canvas></div>
+  </div>
+
+  <div class="card table-card" id="tableCard">
+    <div class="card-title">Proyeksi Per Tahun</div>
+    <button class="btn-toggle" id="btnToggle" onclick="toggleTable()">▼ Tampilkan Tabel</button>
+    <div id="tableWrap" style="display:none">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Tahun</th><th>Modal Awal</th><th>Total Kontribusi</th><th>Keuntungan</th><th>Nilai Total</th></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="emptyState" class="card">
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <p>Masukkan angka investasi Anda di atas,<br>lalu klik <strong>Hitung Hasilnya</strong> untuk melihat<br>proyeksi masa depan finansial Anda.</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>&copy; 2026 Berdua Ibnu Dewi</p>
+  </div>
+</div>
+<script>
+let chartInstance = null, freqVal = 12, tableVisible = false;
+
+function initSliders() {
+  const sl = document.getElementById('lamaTahun');
+  const sr = document.getElementById('returnSlider');
+  const ir = document.getElementById('returnInput');
+
+  function pct(input) {
+    const p = ((input.value - input.min) / (input.max - input.min)) * 100;
+    input.style.setProperty('--val', p + '%');
+  }
+  function fmtR(v) { return v % 1 === 0 ? v : parseFloat(v).toFixed(1); }
+
+  sl.addEventListener('input', function() { document.getElementById('tahunVal').textContent = this.value; pct(this); });
+  sr.addEventListener('input', function() { document.getElementById('returnVal').textContent = fmtR(this.value); ir.value = this.value; pct(this); });
+  ir.addEventListener('input', function() {
+    let v = Math.min(1000, Math.max(0, parseFloat(this.value) || 0));
+    sr.value = v; document.getElementById('returnVal').textContent = fmtR(v); pct(sr);
+  });
+  pct(sl); pct(sr);
+}
+
+function setPill(el) { document.querySelectorAll('.pill').forEach(p => p.classList.remove('active')); el.classList.add('active'); freqVal = parseInt(el.dataset.val); }
+
+function fmt(n)      { return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
+function fmtShort(n) {
+  if (n >= 1e15) return 'Rp ' + (n/1e15).toFixed(2) + ' Kuadriliun';
+  if (n >= 1e12) return 'Rp ' + (n/1e12).toFixed(2) + ' Triliun';
+  if (n >= 1e9)  return 'Rp ' + (n/1e9).toFixed(2) + ' Miliar';
+  if (n >= 1e6)  return 'Rp ' + (n/1e6).toFixed(2) + ' Juta';
+  return fmt(n);
+}
+
+function hitung() {
+  const P   = parseFloat(document.getElementById('investasiAwal').value) || 0;
+  const pmt = parseFloat(document.getElementById('kontribusiBulanan').value) || 0;
+  const t   = parseInt(document.getElementById('lamaTahun').value);
+  const r   = (parseFloat(document.getElementById('returnInput').value) || 0) / 100;
+  const n   = freqVal;
+  if (P === 0 && pmt === 0) { alert('Masukkan setidaknya modal awal atau kontribusi bulanan!'); return; }
+
+  const rows = []; let totalK = P, balance = P;
+  const rP = r / n;
+  for (let yr = 1; yr <= t; yr++) {
+    let bal = balance * Math.pow(1 + rP, n);
+    const pmtPer = pmt * (12 / n);
+    bal += rP > 0 ? pmtPer * ((Math.pow(1 + rP, n) - 1) / rP) : pmtPer * n;
+    totalK += pmt * 12; balance = bal;
+    rows.push({ yr, total: bal, modal: P, kontribusi: totalK - P, gain: bal - totalK });
+  }
+
+  const last = rows[rows.length - 1];
+  const grandTot = last.total;
+
+  document.getElementById('resultHero').style.display = 'block';
+  document.getElementById('heroLabel').textContent = `Dalam ${t} Tahun, Anda Akan Memiliki`;
+  animateVal('heroAmount', grandTot, fmtShort);
+
+  document.getElementById('statGrid').style.display = 'grid';
+  animateVal('statAwal', P, fmtShort);
+  animateVal('statKontribusi', last.kontribusi, fmtShort);
+  animateVal('statGain', last.gain, fmtShort);
+  const pc = v => grandTot > 0 ? ((v/grandTot)*100).toFixed(1)+'%' : '0%';
+  document.getElementById('pctAwal').textContent = pc(P);
+  document.getElementById('pctKontribusi').textContent = pc(last.kontribusi);
+  document.getElementById('pctGain').textContent = pc(last.gain);
+
+  document.getElementById('chartCard').style.display = 'block';
+  document.getElementById('tableCard').style.display = 'block';
+  document.getElementById('emptyState').style.display = 'none';
+  renderChart(rows, P);
+  buildTable(rows, P);
+  document.getElementById('resultHero').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function animateVal(id, end, fmt) {
+  const el = document.getElementById(id);
+  const dur = 800, start = Date.now();
+  const tick = () => { const p = Math.min((Date.now()-start)/dur,1), e=1-Math.pow(1-p,3); el.textContent=fmt(end*e); p<1?requestAnimationFrame(tick):el.textContent=fmt(end); };
+  requestAnimationFrame(tick);
+}
+
+function renderChart(rows, P) {
+  const ctx = document.getElementById('growthChart').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+  const step = rows.length > 20 ? Math.ceil(rows.length/20) : 1;
+  const fd = rows.filter((_,i) => i%step===0 || i===rows.length-1);
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: fd.map(r=>'Thn '+r.yr),
+      datasets: [
+        { label:'Saldo Awal',  data:fd.map(()=>P),              backgroundColor:'#BFDBFE', borderRadius:3, stack:'a' },
+        { label:'Kontribusi',  data:fd.map(r=>r.kontribusi),    backgroundColor:'#60A5FA', borderRadius:3, stack:'a' },
+        { label:'Keuntungan',  data:fd.map(r=>Math.max(0,r.gain)), backgroundColor:'#2563EB', borderRadius:3, stack:'a' },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{ position:'top', labels:{ font:{family:'DM Sans',weight:'600',size:12}, boxWidth:12, padding:14 }},
+        tooltip:{ callbacks:{ label:c=>' '+c.dataset.label+': '+fmtShort(c.raw) }}
+      },
+      scales: {
+        x:{ stacked:true, grid:{display:false}, ticks:{font:{family:'DM Sans',size:11}, maxRotation:45, color:'#9CA3AF'} },
+        y:{ stacked:true, grid:{color:'#F3F4F6'},  ticks:{font:{family:'DM Sans',size:11}, color:'#9CA3AF', callback:v=>fmtShort(v)} }
+      }
+    }
+  });
+}
+
+function buildTable(rows, P) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.yr}</td><td>${fmtShort(P)}</td><td>${fmtShort(r.kontribusi)}</td><td class="td-gain">${fmtShort(Math.max(0,r.gain))}</td><td class="td-total">${fmtShort(r.total)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function toggleTable() {
+  tableVisible = !tableVisible;
+  document.getElementById('tableWrap').style.display = tableVisible ? 'block' : 'none';
+  document.getElementById('btnToggle').textContent = tableVisible ? '▲ Sembunyikan Tabel' : '▼ Tampilkan Tabel';
+}
+
+window.addEventListener('DOMContentLoaded', initSliders);
+</script>
+</body>
+</html>
