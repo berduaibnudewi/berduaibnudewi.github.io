@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -551,6 +552,79 @@
     pointer-events: none;
   }
   @keyframes ripple { to { transform:scale(4); opacity:0; } }
+
+  /* Chart placeholder */
+  .chart-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px;
+    background: var(--bg3);
+    border-radius: 16px;
+    border: 1.5px dashed rgba(37,99,235,0.2);
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .chart-placeholder.hidden { opacity: 0; pointer-events: none; display: none; }
+  .chart-placeholder-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: rgba(37,99,235,0.08);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chart-placeholder p {
+    font-size: 0.9rem; color: var(--muted);
+    font-style: italic; font-weight: 500;
+    text-align: center; padding: 0 16px;
+  }
+
+  /* Mobile-friendly table */
+  @media(max-width:640px){
+    .table-wrap { overflow-x: hidden; }
+    table, thead, tbody, th, td, tr { display: block; }
+    thead { display: none; }
+    tbody tr {
+      border: 1px solid rgba(37,99,235,0.12) !important;
+      border-radius: 14px;
+      margin: 12px 16px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.06);
+    }
+    tbody tr:hover { background: #EFF6FF; }
+    tbody tr:last-child { border-bottom: 1px solid rgba(37,99,235,0.12) !important; }
+    td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      text-align: right;
+      border-bottom: 1px solid rgba(37,99,235,0.06) !important;
+    }
+    td:last-child { border-bottom: none !important; }
+    td::before {
+      content: attr(data-label);
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 500;
+      text-align: left;
+      flex-shrink: 0;
+      margin-right: 8px;
+    }
+    td:first-child {
+      background: linear-gradient(135deg, var(--bg3), #E0E7FF);
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: 0.04em;
+      width: 100%;
+      text-align: center;
+      border-bottom: 1px solid rgba(37,99,235,0.1) !important;
+    }
+    td:first-child::before { display: none; }
+    .td-green { color: var(--green) !important; }
+  }
 </style>
 </head>
 <body>
@@ -686,7 +760,13 @@
       </div>
     </div>
     <div class="chart-canvas-wrap" id="chartWrap">
-      <canvas id="myChart"></canvas>
+      <div class="chart-placeholder" id="chartPlaceholder">
+        <div class="chart-placeholder-icon">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 17l5-5 4 4 7-8" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="3" cy="17" r="1.5" fill="#2563EB"/><circle cx="8" cy="12" r="1.5" fill="#059669"/><circle cx="12" cy="16" r="1.5" fill="#7C3AED"/><circle cx="19" cy="9" r="1.5" fill="#2563EB"/></svg>
+        </div>
+        <p>+ Hitung Proyeksi Dulu Untuk Melihat Grafik Pertumbuhan.</p>
+      </div>
+      <canvas id="myChart" style="display:none"></canvas>
       <div class="chart-tooltip" id="tooltip">
         <div class="tt-year" id="tt-year"></div>
         <div class="tt-row"><span class="tt-label">Total Nilai</span><span class="tt-val" id="tt-total"></span></div>
@@ -704,7 +784,7 @@
       <svg class="toggle-icon" id="toggleIcon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <div class="table-wrap" id="tableWrap">
-      <div id="tableContainer"><p class="placeholder-text">Hitung dulu untuk melihat proyeksi tahunan.</p></div>
+      <div id="tableContainer"><p class="placeholder-text">+ Hitung Proyeksi Dulu Untuk Melihat Proyeksi Per Tahun.</p></div>
     </div>
   </div>
 
@@ -873,6 +953,12 @@ function drawChart(data) {
   const canvas = document.getElementById('myChart');
   const wrap = document.getElementById('chartWrap');
   const tooltip = document.getElementById('tooltip');
+  const placeholder = document.getElementById('chartPlaceholder');
+
+  // Hide placeholder, show canvas
+  if (placeholder) placeholder.classList.add('hidden');
+  canvas.style.display = 'block';
+
   const dpr = window.devicePixelRatio || 1;
   const w = wrap.clientWidth;
   const h = wrap.clientHeight;
@@ -1082,11 +1168,11 @@ function buildTable(data) {
   </tr></thead><tbody>`;
   data.filter(d => d.year > 0).forEach(d => {
     html += `<tr>
-      <td>${d.year}</td>
-      <td>${fmtFull(d.modal)}</td>
-      <td>${fmtFull(d.kontrib)}</td>
-      <td class="td-green">${fmtFull(d.bunga)}</td>
-      <td style="font-weight:600;color:var(--gold-light)">${fmtFull(d.total)}</td>
+      <td data-label="Tahun">Tahun ${d.year}</td>
+      <td data-label="Modal Awal">${fmtFull(d.modal)}</td>
+      <td data-label="Total Kontribusi">${fmtFull(d.kontrib)}</td>
+      <td class="td-green" data-label="Bunga Compound">${fmtFull(d.bunga)}</td>
+      <td data-label="Nilai Total" style="font-weight:600;color:var(--gold-light)">${fmtFull(d.total)}</td>
     </tr>`;
   });
   html += '</tbody></table>';
