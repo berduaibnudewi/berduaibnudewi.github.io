@@ -1,4 +1,6 @@
 
+
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -242,10 +244,20 @@
   }
 
   .slider-marks {
-    display: flex; justify-content: space-between;
+    position: relative;
+    height: 18px;
     margin-top: 8px;
     font-size: 0.72rem; color: var(--muted);
   }
+  .slider-marks span {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    line-height: 1;
+  }
+  .slider-marks span:first-child { transform: translateX(0); }
+  .slider-marks span:last-child  { transform: translateX(-100%); }
 
   /* Frequency Toggle */
   .toggle-group {
@@ -654,7 +666,7 @@
         <label>Modal Awal</label>
         <div class="input-wrap">
           <span class="input-prefix">Rp</span>
-          <input type="number" id="modal" value="" min="0" step="1000000" placeholder="-">
+          <input type="text" id="modal" value="" placeholder="0" inputmode="numeric" autocomplete="off">
         </div>
       </div>
 
@@ -662,7 +674,7 @@
         <label>Kontribusi Bulanan</label>
         <div class="input-wrap">
           <span class="input-prefix">Rp</span>
-          <input type="number" id="bulanan" value="" min="0" step="100000" placeholder="-">
+          <input type="text" id="bulanan" value="" placeholder="0" inputmode="numeric" autocomplete="off">
         </div>
       </div>
 
@@ -670,9 +682,9 @@
         <label>Jangka Waktu</label>
         <div class="slider-wrap">
           <div class="slider-val"><span id="tahunVal">10</span> <span>Tahun</span></div>
-          <input type="range" id="tahun" min="1" max="40" value="10">
-          <div class="slider-marks">
-            <span>1 Tahun</span><span>10</span><span>20</span><span>30</span><span>40 Tahun</span>
+          <input type="range" id="tahun" min="1" max="50" value="10">
+          <div class="slider-marks" id="tahunMarks">
+            <span data-val="1">1</span><span data-val="10">10</span><span data-val="20">20</span><span data-val="30">30</span><span data-val="40">40</span><span data-val="50">50 Thn</span>
           </div>
         </div>
       </div>
@@ -682,8 +694,8 @@
         <div class="slider-wrap">
           <div class="slider-val"><span id="returnVal">15</span> <span>%</span></div>
           <input type="range" id="returnRate" min="0" max="1000" value="15" step="1">
-          <div class="slider-marks">
-            <span>0%</span><span>250%</span><span>500%</span><span>750%</span><span>1000%</span>
+          <div class="slider-marks" id="returnMarks">
+            <span data-val="0">0%</span><span data-val="250">250%</span><span data-val="500">500%</span><span data-val="750">750%</span><span data-val="1000">1000%</span>
           </div>
         </div>
         <div class="input-wrap" style="margin-top:10px">
@@ -872,9 +884,14 @@ function animateValue(el, start, end, duration, isCurrency) {
   requestAnimationFrame(step);
 }
 
+function parseCurrency(val) {
+  // Remove all dots (thousand separators in ID format) and parse
+  return parseFloat((val || '').replace(/\./g, '').replace(/[^0-9]/g, '')) || 0;
+}
+
 function calculate() {
-  const modal = parseFloat(document.getElementById('modal').value) || 0;
-  const bulanan = parseFloat(document.getElementById('bulanan').value) || 0;
+  const modal = parseCurrency(document.getElementById('modal').value);
+  const bulanan = parseCurrency(document.getElementById('bulanan').value);
   const tahun = parseInt(document.getElementById('tahun').value);
   const returnRate = parseFloat(document.getElementById('returnRate').value) / 100;
   const n = compoundFreq;
@@ -1197,6 +1214,81 @@ document.getElementById('calcBtn').addEventListener('click', function(e) {
   r.style.top = (e.clientY - rect.top - size/2) + 'px';
   this.appendChild(r);
   setTimeout(() => r.remove(), 700);
+});
+
+// Precise slider mark alignment
+// The browser offsets the thumb so it doesn't overflow the track edges.
+// At 0% the thumb center is at thumbRadius px; at 100% it's at trackWidth-thumbRadius px.
+// Formula: centerPx = thumbRadius + pct * (trackWidth - thumbDiameter)
+const THUMB_DIAMETER = 20; // must match CSS thumb size
+
+function positionMarks(slider, marksEl) {
+  const trackWidth = slider.getBoundingClientRect().width;
+  if (trackWidth === 0) return; // not rendered yet, retry
+  const min = parseFloat(slider.min);
+  const max = parseFloat(slider.max);
+  const r = THUMB_DIAMETER / 2;
+
+  marksEl.querySelectorAll('span[data-val]').forEach((span, i, all) => {
+    const val = parseFloat(span.dataset.val);
+    const pct = (val - min) / (max - min);
+    // Exact thumb center position as % of track width
+    const centerPx = r + pct * (trackWidth - THUMB_DIAMETER);
+    const leftPct  = (centerPx / trackWidth) * 100;
+    span.style.left = leftPct + '%';
+    // Keep edge labels from clipping out
+    if (i === 0)          span.style.transform = 'translateX(0)';
+    else if (i === all.length - 1) span.style.transform = 'translateX(-100%)';
+    else                  span.style.transform = 'translateX(-50%)';
+  });
+}
+
+function positionAllMarks() {
+  positionMarks(document.getElementById('tahun'),      document.getElementById('tahunMarks'));
+  positionMarks(document.getElementById('returnRate'), document.getElementById('returnMarks'));
+}
+
+// Run once layout is ready, and again on resize
+window.addEventListener('DOMContentLoaded', positionAllMarks);
+window.addEventListener('load', positionAllMarks);
+window.addEventListener('resize', positionAllMarks);
+// Also call after a short delay to handle font/layout settling
+setTimeout(positionAllMarks, 100);
+setTimeout(positionAllMarks, 400);
+
+// Currency input formatting (titik setiap 3 digit, format Rupiah Indonesia)
+function formatRupiah(el) {
+  // Get raw digits only
+  let raw = el.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+  if (raw === '') { el.value = ''; return; }
+  // Add thousand separators (dots)
+  let formatted = parseInt(raw, 10).toLocaleString('id-ID');
+  el.value = formatted;
+}
+
+['modal', 'bulanan'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', function() {
+    // Save caret / cursor position intent: just reformat
+    const raw = this.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+    if (raw === '') { this.value = ''; return; }
+    this.value = parseInt(raw, 10).toLocaleString('id-ID');
+  });
+  el.addEventListener('keydown', function(e) {
+    // Allow: backspace, delete, tab, escape, enter, arrows, home, end
+    if ([8,9,13,27,35,36,37,38,39,40,46].includes(e.keyCode)) return;
+    // Allow Ctrl+A, C, V, X
+    if ((e.ctrlKey || e.metaKey) && [65,67,86,88].includes(e.keyCode)) return;
+    // Block non-digit keys
+    if (!/^[0-9]$/.test(e.key)) e.preventDefault();
+  });
+  el.addEventListener('paste', function(e) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    const raw = text.replace(/\./g, '').replace(/[^0-9]/g, '');
+    if (!raw) return;
+    this.value = parseInt(raw, 10).toLocaleString('id-ID');
+  });
 });
 
 // Initial state — do NOT auto-calculate
