@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Stock Search — TradingView Data</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #1f2533;
+    --border2: #2a3147;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --accent: #00d4aa;
+    --red: #f43f5e;
+    --green: #10b981;
+    --glow: 0 0 20px rgba(0,212,170,0.15);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,12,16,0.9);
+    backdrop-filter: blur(12px);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 34px; height: 34px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+  }
+  .logo-text { font-size: 19px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo-text span { color: var(--accent); }
+  .header-badge {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 4px 10px;
+    border-radius: 4px;
+    opacity: 0.7;
+  }
+  .proxy-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+  }
+  .proxy-status.ok { color: var(--green); border-color: var(--green); }
+  .proxy-status.fail { color: var(--red); border-color: var(--red); }
+
+  .main {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 44px 24px 80px;
+  }
+  .hero {
+    text-align: center;
+    margin-bottom: 44px;
+    animation: fadeInDown 0.6s ease;
+  }
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0.8;
+  }
+  .hero h1 {
+    font-size: clamp(30px, 6vw, 52px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, #e2e8f0 30%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p { color: var(--muted); font-size: 15px; }
+
+  .search-wrap { position: relative; margin-bottom: 20px; animation: fadeInUp 0.6s ease 0.1s both; }
+  .search-icon {
+    position: absolute; left: 20px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted); font-size: 17px;
+    pointer-events: none; z-index: 2;
+  }
+  #searchInput {
+    width: 100%;
+    padding: 19px 60px 19px 54px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    font-size: 16px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 500;
+    color: var(--text);
+    outline: none;
+    transition: all 0.25s;
+  }
+  #searchInput::placeholder { color: var(--muted); }
+  #searchInput:focus {
+    border-color: var(--accent);
+    box-shadow: var(--glow), 0 0 0 1px rgba(0,212,170,0.1);
+    background: var(--surface2);
+  }
+  .search-clear {
+    position: absolute; right: 18px; top: 50%;
+    transform: translateY(-50%);
+    background: var(--border2); border: none;
+    color: var(--muted); width: 28px; height: 28px;
+    border-radius: 50%; cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+    font-size: 13px; transition: all 0.2s;
+  }
+  .search-clear:hover { color: var(--text); }
+  .search-clear.visible { display: flex; }
+
+  .filter-bar {
+    display: flex; gap: 8px; margin-bottom: 26px;
+    flex-wrap: wrap; animation: fadeInUp 0.6s ease 0.15s both;
+  }
+  .filter-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 0.5px;
+    padding: 7px 14px; border-radius: 6px;
+    border: 1px solid var(--border2);
+    background: transparent; color: var(--muted);
+    cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active {
+    background: rgba(0,212,170,0.12);
+    border-color: var(--accent); color: var(--accent);
+  }
+
+  .results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; padding: 0 4px;
+    animation: fadeInUp 0.6s ease 0.2s both;
+  }
+  .results-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--muted);
+  }
+  .results-count span { color: var(--accent); }
+
+  .results-grid { display: flex; flex-direction: column; gap: 6px; animation: fadeInUp 0.6s ease 0.2s both; }
+
+  .stock-card {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    align-items: center; gap: 16px;
+    padding: 15px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer; transition: all 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .stock-card:hover {
+    border-color: var(--border2);
+    background: var(--surface2);
+    transform: translateX(3px);
+    box-shadow: -3px 0 0 var(--accent), var(--glow);
+  }
+  .stock-logo {
+    width: 48px; height: 48px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .stock-logo img {
+    width: 100%; height: 100%;
+    object-fit: contain; border-radius: 8px; padding: 5px;
+  }
+  .stock-info { min-width: 0; }
+  .stock-symbol {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 600; color: var(--text);
+    margin-bottom: 4px; display: flex; align-items: center; gap: 8px;
+  }
+  .stock-exchange {
+    font-size: 10px; color: var(--accent);
+    background: rgba(0,212,170,0.1);
+    border: 1px solid rgba(0,212,170,0.2);
+    padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px;
+  }
+  .stock-name {
+    font-size: 13px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .stock-meta { text-align: right; flex-shrink: 0; }
+  .stock-type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    border: 1px solid var(--border2);
+    padding: 3px 8px; border-radius: 4px;
+    margin-bottom: 4px; display: inline-block;
+  }
+  .stock-country { font-size: 18px; display: block; text-align: right; }
+
+  .state-box { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .state-box .state-icon { font-size: 40px; margin-bottom: 16px; opacity: 0.5; display: block; }
+  .state-box p { font-size: 15px; margin-bottom: 8px; }
+  .state-box small { font-family: 'JetBrains Mono', monospace; font-size: 12px; opacity: 0.6; }
+  .state-box .retry-btn {
+    margin-top: 16px;
+    padding: 10px 24px;
+    background: rgba(0,212,170,0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+  .state-box .retry-btn:hover { background: rgba(0,212,170,0.2); }
+
+  .skeleton { animation: pulse 1.4s ease infinite; }
+  .skeleton-card {
+    display: grid; grid-template-columns: 48px 1fr auto;
+    gap: 16px; padding: 15px 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 6px; align-items: center;
+  }
+  .sk-box { background: var(--border2); border-radius: 6px; }
+  .sk-circle { width: 48px; height: 48px; border-radius: 10px; background: var(--border2); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 20px; width: 100%; max-width: 980px;
+    max-height: 90vh; overflow: hidden;
+    display: flex; flex-direction: column;
+    transform: scale(0.95) translateY(10px);
+    transition: transform 0.3s;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.6);
+  }
+  .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+
+  .modal-header {
+    padding: 22px 26px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px; flex-shrink: 0;
+  }
+  .modal-stock-logo {
+    width: 52px; height: 52px; border-radius: 12px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .modal-stock-logo img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
+  .modal-title-wrap { flex: 1; min-width: 0; }
+  .modal-symbol {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 19px; font-weight: 700; color: var(--text);
+    margin-bottom: 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .modal-exchange-badge {
+    font-size: 11px; background: rgba(0,212,170,0.12);
+    color: var(--accent); border: 1px solid rgba(0,212,170,0.25);
+    padding: 3px 10px; border-radius: 20px; font-weight: 500;
+  }
+  .modal-name { font-size: 13px; color: var(--muted); }
+  .modal-actions { display: flex; gap: 10px; flex-shrink: 0; }
+  .btn-tv {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 16px;
+    background: var(--accent); color: #000;
+    border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    cursor: pointer; transition: all 0.2s; text-decoration: none;
+  }
+  .btn-tv:hover { background: #00b894; }
+  .btn-close {
+    width: 38px; height: 38px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 8px; color: var(--muted);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 17px; transition: all 0.2s; flex-shrink: 0;
+  }
+  .btn-close:hover { color: var(--text); border-color: var(--text); }
+
+  .modal-body { flex: 1; overflow: hidden; position: relative; min-height: 480px; }
+  .tv-chart-wrap { width: 100%; height: 100%; min-height: 480px; }
+
+  .modal-info-bar {
+    padding: 12px 26px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 28px; flex-shrink: 0;
+    flex-wrap: wrap; background: var(--bg);
+  }
+  .info-item label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    display: block; margin-bottom: 2px;
+  }
+  .info-item span { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); }
+
+  .popular-section { margin-bottom: 30px; animation: fadeInUp 0.6s ease 0.25s both; }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; color: var(--muted);
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  .popular-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .popular-tag {
+    padding: 8px 16px;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    font-family: 'JetBrains Mono', monospace; color: var(--muted);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .popular-tag:hover { color: var(--accent); border-color: var(--accent); background: rgba(0,212,170,0.08); }
+
+  @keyframes fadeInDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  .card-enter { animation: cardIn 0.25s ease both; }
+  @keyframes cardIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  @media (max-width: 600px) {
+    header { padding: 14px 16px; }
+    .main { padding: 28px 14px 60px; }
+    .modal-header { padding: 16px; flex-wrap: wrap; }
+    .btn-tv { display: none; }
+    .modal-info-bar { gap: 14px; padding: 10px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📈</div>
+    <span class="logo-text">Stock<span>Search</span></span>
+  </div>
+  <span class="proxy-status" id="proxyStatus">Menghubungkan…</span>
+  <div class="header-badge">Data: TradingView</div>
+</header>
+
+<main class="main">
+  <div class="hero">
+    <p class="hero-eyebrow">Real-time · Global Markets · 80,000+ Saham</p>
+    <h1>Cari Saham<br>Seluruh Dunia</h1>
+    <p>Bursa Amerika, Asia, Eropa, dan seluruh pasar global</p>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput"
+      placeholder="Cari simbol atau nama perusahaan… (contoh: AAPL, Tesla, BBCA)"
+      autocomplete="off" spellcheck="false" />
+    <button class="search-clear" id="clearBtn" title="Hapus">✕</button>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" data-type="">Semua</button>
+    <button class="filter-btn" data-type="stock">Saham</button>
+    <button class="filter-btn" data-type="fund">ETF/Fund</button>
+    <button class="filter-btn" data-type="crypto">Crypto</button>
+    <button class="filter-btn" data-type="forex">Forex</button>
+    <button class="filter-btn" data-type="futures">Futures</button>
+    <button class="filter-btn" data-type="index">Indeks</button>
+  </div>
+
+  <div class="popular-section" id="popularSection">
+    <p class="section-label">🔥 Populer</p>
+    <div class="popular-tags">
+      <span class="popular-tag" onclick="quickSearch('AAPL')">AAPL</span>
+      <span class="popular-tag" onclick="quickSearch('TSLA')">TSLA</span>
+      <span class="popular-tag" onclick="quickSearch('BBCA')">BBCA</span>
+      <span class="popular-tag" onclick="quickSearch('MSFT')">MSFT</span>
+      <span class="popular-tag" onclick="quickSearch('NVDA')">NVDA</span>
+      <span class="popular-tag" onclick="quickSearch('TLKM')">TLKM</span>
+      <span class="popular-tag" onclick="quickSearch('GOTO')">GOTO</span>
+      <span class="popular-tag" onclick="quickSearch('BMRI')">BMRI</span>
+      <span class="popular-tag" onclick="quickSearch('AMZN')">AMZN</span>
+      <span class="popular-tag" onclick="quickSearch('GOOGL')">GOOGL</span>
+      <span class="popular-tag" onclick="quickSearch('BTC')">Bitcoin</span>
+      <span class="popular-tag" onclick="quickSearch('SPX')">S&P 500</span>
+    </div>
+  </div>
+
+  <div class="results-header" id="resultsHeader" style="display:none;">
+    <span class="results-count" id="resultsCount"><span>0</span> hasil ditemukan</span>
+  </div>
+  <div class="results-grid" id="resultsGrid"></div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-stock-logo" id="modalLogo"></div>
+      <div class="modal-title-wrap">
+        <div class="modal-symbol" id="modalSymbol"></div>
+        <div class="modal-name" id="modalName"></div>
+      </div>
+      <div class="modal-actions">
+        <a id="tvLink" href="#" target="_blank" rel="noopener" class="btn-tv">↗ Buka di TradingView</a>
+        <button class="btn-close" id="modalClose">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="tv-chart-wrap" id="chartWrap"></div>
+    </div>
+    <div class="modal-info-bar">
+      <div class="info-item"><label>Exchange</label><span id="infoExchange">—</span></div>
+      <div class="info-item"><label>Tipe</label><span id="infoType">—</span></div>
+      <div class="info-item"><label>Negara</label><span id="infoCountry">—</span></div>
+      <div class="info-item"><label>Mata uang</label><span id="infoCurrency">—</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const TV_SEARCH = 'https://symbol-search.tradingview.com/symbol_search/v3/';
+
+// CORS proxy list — tried in order until one works
+const PROXIES = [
+  url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}`,
+  url => url   // last resort: direct (works if served from a real server)
+];
+
+let workingProxyIdx = 0;
+let proxyConfirmed = false;
+let currentType = '';
+let searchTimer = null;
+let currentQuery = '';
+let lastResults = [];
+
+// ============================================================
+// HELPERS
+// ============================================================
+const countryFlags = {
+  US:'🇺🇸',ID:'🇮🇩',JP:'🇯🇵',CN:'🇨🇳',GB:'🇬🇧',DE:'🇩🇪',
+  FR:'🇫🇷',KR:'🇰🇷',HK:'🇭🇰',SG:'🇸🇬',AU:'🇦🇺',IN:'🇮🇳',
+  CA:'🇨🇦',BR:'🇧🇷',IT:'🇮🇹',ES:'🇪🇸',NL:'🇳🇱',SE:'🇸🇪',
+  CH:'🇨🇭',NO:'🇳🇴',DK:'🇩🇰',FI:'🇫🇮',TW:'🇹🇼',TH:'🇹🇭',
+  MY:'🇲🇾',PH:'🇵🇭',VN:'🇻🇳',MX:'🇲🇽',ZA:'🇿🇦',TR:'🇹🇷',
+  SA:'🇸🇦',AE:'🇦🇪',QA:'🇶🇦',IL:'🇮🇱',NG:'🇳🇬',NZ:'🇳🇿',
+  AT:'🇦🇹',BE:'🇧🇪',PT:'🇵🇹',GR:'🇬🇷',PL:'🇵🇱',AR:'🇦🇷'
+};
+const typeLabels = {
+  stock:'Saham',fund:'ETF/Fund',dr:'Depositary Receipt',
+  bond:'Obligasi',warrant:'Waran',right:'Rights',
+  crypto:'Crypto',forex:'Forex',futures:'Futures',
+  index:'Indeks',economic:'Ekonomi',commodity:'Komoditas'
+};
+
+const getFlag  = c => countryFlags[c] || '🌐';
+const getType  = t => typeLabels[t]   || t || 'Aset';
+const cleanSym = s => s.includes(':') ? s.split(':')[1] : s;
+const stripHtml= s => (s||'').replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+const escHtml  = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function setProxyStatus(ok, label) {
+  const el = document.getElementById('proxyStatus');
+  el.textContent = label;
+  el.className = 'proxy-status ' + (ok === true ? 'ok' : ok === false ? 'fail' : '');
+}
+
+// ============================================================
+// FETCH WITH PROXY FALLBACK
+// ============================================================
+async function fetchWithProxy(targetUrl, proxyIdx = workingProxyIdx) {
+  for (let i = proxyIdx; i < PROXIES.length; i++) {
+    const proxied = PROXIES[i](targetUrl);
+    try {
+      const res = await fetch(proxied, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) continue;
+      const text = await res.text();
+      // allorigins wraps in {contents:"..."}
+      let data;
+      try { data = JSON.parse(text); } catch { continue; }
+      if (data && data.contents) {
+        try { data = JSON.parse(data.contents); } catch { continue; }
+      }
+      // success — remember which proxy works
+      if (i !== workingProxyIdx) {
+        workingProxyIdx = i;
+      }
+      if (!proxyConfirmed) {
+        proxyConfirmed = true;
+        const labels = ['corsproxy.io','allorigins','thingproxy','Direct'];
+        setProxyStatus(true, '✓ ' + (labels[i] || 'Proxy'));
+      }
+      return data;
+    } catch(_) { /* try next */ }
+  }
+  setProxyStatus(false, '✗ Koneksi gagal');
+  throw new Error('Semua proxy gagal. Coba buka halaman ini dari web server.');
+}
+
+// ============================================================
+// SEARCH
+// ============================================================
+function buildSearchUrl(query, type) {
+  const p = new URLSearchParams({ text: query, hl: '1', lang: 'id', domain: 'production', count: '30' });
+  if (type) p.set('type', type);
+  return `${TV_SEARCH}?${p}`;
+}
+
+async function doSearch(query, type) {
+  if (!query || !query.trim()) { showEmpty(); return; }
+  showSkeleton();
+  try {
+    const data = await fetchWithProxy(buildSearchUrl(query, type));
+    const symbols = (data && data.symbols) ? data.symbols : [];
+    lastResults = symbols;
+    renderResults(symbols, query);
+  } catch(err) {
+    showError(err.message);
+  }
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderResults(symbols, query) {
+  const grid   = document.getElementById('resultsGrid');
+  const header = document.getElementById('resultsHeader');
+  const count  = document.getElementById('resultsCount');
+
+  if (!symbols.length) {
+    grid.innerHTML = `<div class="state-box">
+      <span class="state-icon">🔍</span>
+      <p>Tidak ada hasil untuk "<strong>${escHtml(query)}</strong>"</p>
+      <small>Coba cari simbol atau nama perusahaan lain</small>
+    </div>`;
+    header.style.display = 'none';
+    return;
+  }
+
+  header.style.display = 'flex';
+  count.innerHTML = `<span>${symbols.length}</span> hasil ditemukan`;
+
+  grid.innerHTML = symbols.map((s, i) => {
+    const sym   = cleanSym(s.symbol || '');
+    const exch  = s.exchange || s.prefix || '';
+    const name  = stripHtml(s.description || s.full_name || '');
+    const type  = s.type || '';
+    const ctry  = s.country || '';
+    const init  = sym.slice(0, 2);
+    const logo  = logoUrl(s, sym);
+
+    return `<div class="stock-card card-enter" style="animation-delay:${i*0.03}s" onclick="openModal(${i})">
+      <div class="stock-logo">
+        ${logo ? `<img src="${logo}" alt="${sym}" onerror="this.parentElement.textContent='${escHtml(init)}'">` : escHtml(init)}
+      </div>
+      <div class="stock-info">
+        <div class="stock-symbol">
+          ${escHtml(sym)}
+          ${exch ? `<span class="stock-exchange">${escHtml(exch)}</span>` : ''}
+        </div>
+        <div class="stock-name">${escHtml(name)}</div>
+      </div>
+      <div class="stock-meta">
+        <span class="stock-type">${getType(type)}</span>
+        <span class="stock-country">${getFlag(ctry)}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('popularSection').style.display = 'none';
+}
+
+function logoUrl(s, sym) {
+  const full = s.symbol || '';
+  if (!full) return null;
+  const path = full.replace(':', '/');
+  return `https://s3-symbol-logo.tradingview.com/${encodeURIComponent(path).replace(/%2F/g,'/')}.svg`;
+}
+
+function showSkeleton() {
+  document.getElementById('resultsGrid').innerHTML =
+    Array(7).fill(0).map(() => `
+      <div class="skeleton-card skeleton">
+        <div class="sk-circle"></div>
+        <div>
+          <div class="sk-box" style="width:80px;height:13px;margin-bottom:8px"></div>
+          <div class="sk-box" style="width:190px;height:12px"></div>
+        </div>
+        <div class="sk-box" style="width:50px;height:20px;border-radius:4px"></div>
+      </div>`).join('');
+  document.getElementById('resultsHeader').style.display = 'none';
+  document.getElementById('popularSection').style.display = 'none';
+}
+
+function showEmpty() {
+  document.getElementById('resultsGrid').innerHTML = '';
+  document.getElementById('resultsHeader').style.display = 'none';
+  document.getElementById('popularSection').style.display = 'block';
+}
+
+function showError(msg) {
+  document.getElementById('resultsGrid').innerHTML = `
+    <div class="state-box">
+      <span class="state-icon">⚠️</span>
+      <p>Gagal mengambil data</p>
+      <small>${escHtml(msg)}</small>
+      <br>
+      <button class="retry-btn" onclick="doSearch(currentQuery, currentType)">🔄 Coba Lagi</button>
+    </div>`;
+  document.getElementById('resultsHeader').style.display = 'none';
+}
+
+// ============================================================
+// MODAL / CHART
+// ============================================================
+function openModal(index) {
+  const s = lastResults[index];
+  if (!s) return;
+
+  const full  = s.symbol || '';
+  const sym   = cleanSym(full);
+  const exch  = s.exchange || s.prefix || '';
+  const name  = stripHtml(s.description || s.full_name || '');
+  const type  = s.type || '';
+  const ctry  = s.country || '';
+  const curr  = s.currency_code || '';
+  const init  = sym.slice(0, 2);
+  const logo  = logoUrl(s, sym);
+
+  // Logo
+  const logoEl = document.getElementById('modalLogo');
+  logoEl.innerHTML = logo
+    ? `<img src="${logo}" alt="${sym}" onerror="this.parentElement.textContent='${escHtml(init)}'">` 
+    : escHtml(init);
+
+  document.getElementById('modalSymbol').innerHTML =
+    `${escHtml(sym)} ${exch ? `<span class="modal-exchange-badge">${escHtml(exch)}</span>` : ''}`;
+  document.getElementById('modalName').textContent = name;
+
+  const tvSymbol = full.includes(':') ? full : (exch ? `${exch}:${sym}` : sym);
+  document.getElementById('tvLink').href =
+    `https://id.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
+
+  document.getElementById('infoExchange').textContent = exch || '—';
+  document.getElementById('infoType').textContent     = getType(type);
+  document.getElementById('infoCountry').textContent  = `${getFlag(ctry)} ${ctry || '—'}`;
+  document.getElementById('infoCurrency').textContent = curr || '—';
+
+  injectChart(tvSymbol);
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function injectChart(tvSymbol) {
+  const wrap = document.getElementById('chartWrap');
+  wrap.innerHTML = '';
+
+  const container = document.createElement('div');
+  container.className = 'tradingview-widget-container';
+  container.style.cssText = 'height:100%;width:100%;min-height:480px';
+
+  const inner = document.createElement('div');
+  inner.className = 'tradingview-widget-container__widget';
+  inner.style.cssText = 'height:calc(100% - 32px);width:100%';
+  container.appendChild(inner);
+
+  // Copyright line (required by TradingView terms)
+  const copy = document.createElement('div');
+  copy.className = 'tradingview-widget-copyright';
+  copy.innerHTML = `<a href="https://id.tradingview.com/symbols/${encodeURIComponent(tvSymbol)}/" rel="noopener" target="_blank"><span style="color:#00d4aa">Data TradingView</span></a>`;
+  container.appendChild(copy);
+
+  wrap.appendChild(container);
+
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+  script.async = true;
+  script.innerHTML = JSON.stringify({
+    autosize: true,
+    symbol: tvSymbol,
+    interval: 'D',
+    timezone: 'Asia/Jakarta',
+    theme: 'dark',
+    style: '1',
+    locale: 'id',
+    hide_top_toolbar: false,
+    hide_legend: false,
+    save_image: false,
+    calendar: false,
+    hide_volume: false,
+    support_host: 'https://www.tradingview.com',
+    backgroundColor: 'rgba(17,19,24,1)',
+    gridColor: 'rgba(31,37,51,1)',
+  });
+  container.appendChild(script);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  setTimeout(() => { document.getElementById('chartWrap').innerHTML = ''; }, 300);
+}
+
+// ============================================================
+// QUICK SEARCH
+// ============================================================
+function quickSearch(q) {
+  const inp = document.getElementById('searchInput');
+  inp.value = q;
+  currentQuery = q;
+  document.getElementById('clearBtn').classList.add('visible');
+  clearTimeout(searchTimer);
+  doSearch(q, currentType);
+  inp.focus();
+}
+
+// ============================================================
+// PROXY WARM-UP — test on load
+// ============================================================
+async function warmupProxy() {
+  setProxyStatus(null, 'Menghubungkan…');
+  try {
+    await fetchWithProxy(buildSearchUrl('AAPL', ''), 0);
+  } catch(_) {
+    setProxyStatus(false, '✗ Offline / Diblokir');
+  }
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+document.getElementById('searchInput').addEventListener('input', e => {
+  const q = e.target.value.trim();
+  currentQuery = q;
+  document.getElementById('clearBtn').classList.toggle('visible', q.length > 0);
+  clearTimeout(searchTimer);
+  if (!q) { showEmpty(); return; }
+  searchTimer = setTimeout(() => doSearch(q, currentType), 320);
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  const inp = document.getElementById('searchInput');
+  inp.value = ''; currentQuery = '';
+  document.getElementById('clearBtn').classList.remove('visible');
+  showEmpty(); inp.focus();
+});
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentType = btn.dataset.type;
+    if (currentQuery) doSearch(currentQuery, currentType);
+  });
+});
+
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// Start
+document.getElementById('searchInput').focus();
+warmupProxy();
+</script>
+</body>
+</html>
