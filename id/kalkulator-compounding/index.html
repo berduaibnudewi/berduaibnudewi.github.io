@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -8,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kalkulator Compounding @berduaibnudewi</title>
 <link rel="icon" type="image/x-icon" href="https://avatars.githubusercontent.com/u/222197246?s=48&v=4">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/222197246?s=48&v=4">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="436">
+<meta property="og:image:height" content="228">
+<meta property="og:description" content="Hitung seberapa besar investasi Anda bertumbuh dari waktu ke waktu dengan metode Compound Interest / Bunga Berbunga.">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -76,9 +78,10 @@
   }
 
   /* Header */
-  header {
+  header, footer {
     text-align: center;
     margin-bottom: 60px;
+    margin-top: 30px;
     animation: fadeDown 0.8s cubic-bezier(.16,1,.3,1) both;
   }
 
@@ -651,7 +654,7 @@
   <header>
     <div class="badge">Dibuat oleh Berdua Ibnu Dewi</div>
     <h1>Kalkulator <span class="gold">Compounding</span></h1>
-    <p class="subtitle">Hitung seberapa besar investasi Anda bertumbuh dari waktu ke waktu dengan metode Compounding Interest.</p>
+    <p class="subtitle">Hitung seberapa besar investasi Anda bertumbuh dari waktu ke waktu dengan metode Compound Interest / Bunga Berbunga.</p>
   </header>
 
   <div class="main-grid">
@@ -799,6 +802,11 @@
       <div id="tableContainer"><p class="placeholder-text">+ Hitung Proyeksi Dulu Untuk Melihat Proyeksi Per Tahun.</p></div>
     </div>
   </div>
+    
+  <footer>
+    <p class="subtitle">&copy; <span id="year"></span> Berdua Ibnu Dewi</p>
+    <script>const d = new Date(); let year = d.getFullYear(); document.getElementById("year").innerHTML = year;</script>
+  </footer>
 
 </div>
 
